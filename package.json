@@ -1,0 +1,24 @@
+{
+  "name": "google-home-notify-simple",
+  "version": "0.1.0",
+  "description": "Notify using Google Home",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yakumo-saki/google-home-notify-simple.git"
+  },
+  "author": "Yakumo Saki",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yakumo-saki/google-home-notify-simple/issues"
+  },
+  "homepage": "https://github.com/yakumo-saki/google-home-notify-simple#readme",
+  "dependencies": {
+    "google-tts-api": "0.0.4",
+    "multicast-dns": "^7.2.0",
+    "google-home-notifier": "1.2.0"
+  }
+}
