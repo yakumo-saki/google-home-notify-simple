@@ -8,6 +8,9 @@ var DefaultMediaReceiver = require('castv2-client').DefaultMediaReceiver;
 
 var language = "en";
 
+// wait until talk or playing is end.
+var async = false;
+
 // cache google home endpoint
 var cachedIpOrHost;
 
@@ -103,20 +106,23 @@ function ip(ip, lang) {
   return this;
 }
 
-function notify(message, callback) {
-	return getDeviceAddress().then(function (deviceAddress) {
-		getSpeechUrl(message, deviceAddress, function(res) {
-      if (callback) callback(res)
-		});
-	})
-};
-
- function play(mp3_url, callback) {
-	getDeviceAddress().then(function (deviceAddress) {
-    getPlayUrl(mp3_url, deviceAddress, function(res) {
-      if (callback) callback(res)
-    });
-	})
+/**
+ * Talk text by TTS
+ * @param {} message
+ * @param {*} callback
+ */
+function notify(message) {
+  var hostOrIp;
+  return getDeviceAddress()
+  .then(function (deviceAddress) {
+    hostOrIp = deviceAddress
+		return getSpeechUrl(message, hostOrIp);
+  }).then(function (url) {
+    logDebug("got google TTS url: " + url);
+    return playUrlOnGoogleHome(hostOrIp, url);
+  }).catch(function (err) {
+    console.error(err.stack);
+  });
 };
 
 function getSpeechUrl(text, host, callback) {
@@ -124,51 +130,74 @@ function getSpeechUrl(text, host, callback) {
   var googlettsaccent = language;
   logDebug("google TTS text = " + text + " language=" + language);
 
-  googletts(text, language, 1, 1000, googlettsaccent).then(function (url) {
-    logDebug("got google TTS url: " + url);
-
-    playOnGoogleHome(host, url, function(res){
-      if (callback) callback(res)
-    });
-  }).catch(function (err) {
-    console.error(err.stack);
-  });
+  return googletts(text, language, 1, 1000, googlettsaccent)
 };
 
-function getPlayUrl(url, host, callback) {
-    playOnGoogleHome(host, url, function(res){
-      if (callback) callback(res)
-    });
+/**
+ * play mp3 url.
+ * @param {} mp3_url
+ */
+function play(mp3_url) {
+  return getDeviceAddress()
+  .then(function (hostOrIp) {
+    return playUrlOnGoogleHome(hostOrIp, url);
+	})
 };
 
 /**
  * Play MP3 url on specified Google Home
  * @param {*} host
  * @param {*} url
- * @param {*} callback
  */
-function playOnGoogleHome(host, url, callback) {
-  var chromecast = new Client();  // chromecast client
-  chromecast.connect(host, function() {
-    chromecast.launch(DefaultMediaReceiver, function(err, player) {
+function playUrlOnGoogleHome(host, url) {
+	return new Promise(function(resolve, reject) {
 
-      var media = {
-        contentId: url,
-        contentType: 'audio/mp3',
-        streamType: 'LIVE' // BUFFERED or LIVE
-      };
-      player.load(media, { autoplay: true }, function(err, status) {
-        chromecast.close();
-        callback('Device notified');
+    var chromecast = new Client();  // chromecast client
+    chromecast.on('error', function(err) {
+      console.log('Error: %s', err.message);
+      chromecast.close();
+      reject("Error: " + err.message);
+    });
+
+    chromecast.connect(host, function() {
+      chromecast.launch(DefaultMediaReceiver, function(err, player) {
+
+
+        var media = {
+          contentId: url,
+          contentType: 'audio/mp3',
+          streamType: 'LIVE' // BUFFERED or LIVE
+        };
+
+        // playing status watcher
+        var playing_flag = false;
+        player.on('status', function(status) {
+
+          if (async) return;
+
+          logDebug(status.playerState);
+          if (!playing_flag && status.playerState == "PLAYING") {
+            logDebug("Started playing");
+            playing_flag = true;
+          } else if (playing_flag && status.playerState == "IDLE") {
+            // IDLE -> PLAYING -> IDLE (playing ended)
+            logDebug("End playing");
+            resolve("playing end.");
+            chromecast.close();
+          }
+        });
+
+        player.load(media, { autoplay: true }, function(err, status) {
+          if (async) {
+            // when async playing, we dont need status watching.
+            chromecast.close();
+            resolve("device notified async.");
+          }
+        });
       });
     });
-  });
 
-  chromecast.on('error', function(err) {
-    console.log('Error: %s', err.message);
-    chromecast.close();
-    callback('error');
-  });
+  }); // promise
 };
 
 // EXPORT
@@ -178,3 +207,4 @@ exports.lang = language;
 exports.notify = notify;
 exports.play = play;
 exports.debugLog = DEBUG_LOG;
+exports.async = async;
