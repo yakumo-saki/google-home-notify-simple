@@ -19,9 +19,9 @@ var cachedIpOrHost;
  * @param {*} msg
  */
 function logDebug(msg) {
-  if (DEBUG_LOG) {
-    console.log(msg);
-  }
+    if (DEBUG_LOG) {
+        console.log(msg);
+    }
 }
 
 /**
@@ -30,43 +30,40 @@ function logDebug(msg) {
  * @param {*} msg
  */
 function getMDNSResponse(resolve, reject) {
-	console.log("get mDNS response")
-	return new Promise(function(resolve, reject) {
-		var mdns = require('multicast-dns')();
+    console.log("get mDNS response")
+    return new Promise(function (resolve, reject) {
+        var mdns = require('multicast-dns')();
 
-		mdns.on('response', function(response) {
-			// console.log('got a response packet:', response);
+        mdns.on('response', function (response) {
+            // console.log('got a response packet:', response);
 
-			response.additionals.forEach(function(found) {
-				logDebug("===");
-				logDebug(found);
-				logDebug("===");
+            response.additionals.forEach(function (found) {
 
-			// check found for what we found
-			if (found.name.endsWith(MDNS_SUFFIX) && found.type === 'SRV') {
-          logDebug("Found google home **********************");
-					logDebug(found.data.target)
-					logDebug(found.data.port)
-					logDebug("****************************************");
+                // check found for what we found
+                if (found.name.endsWith(MDNS_SUFFIX) && found.type === 'SRV') {
+                    logDebug("Found google home **********************");
+                    logDebug(found.data.target)
+                    logDebug(found.data.port)
+                    logDebug("****************************************");
 
-					resolve(found);
-				}
-			});
+                    resolve(found);
+                }
+            });
 
-			logDebug("mDNS destroy");
+            logDebug("mDNS destroy");
 
-			reject();
-			mdns.destroy();
-		});
+            reject();
+            mdns.destroy();
+        });
 
-		mdns.query({
-			questions:[{
-				name: MDNS_SUFFIX,
-				type: 'PTR'
-			}]
-		});
+        mdns.query({
+            questions: [{
+                name: MDNS_SUFFIX,
+                type: 'PTR'
+            }]
+        });
 
-	});
+    });
 }
 
 /**
@@ -75,35 +72,42 @@ function getMDNSResponse(resolve, reject) {
  * @returns promise
  */
 function getDeviceAddress() {
-	if (cachedIpOrHost != null) {
-    logDebug("Discover google home by cache = " + cachedIpOrHost);
-		return Promise.resolve(cachedIpOrHost);
-	}
+    if (cachedIpOrHost != null) {
+        logDebug("Discover google home by cache = " + cachedIpOrHost);
+        return Promise.resolve(cachedIpOrHost);
+    }
 
-	return getMDNSResponse().then(function(resolve) {
-    logDebug("Discover google home by mDNS = " + resolve.data.target)
-    cachedIpOrHost = resolve.data.target;
-		return resolve.data.target;
-	}, function(reject) {
-		return null;
-	});
+    return getMDNSResponse().then(function (resolve) {
+        logDebug("Discover google home by mDNS = " + resolve.data.target)
+        cachedIpOrHost = resolve.data.target;
+        return resolve.data.target;
+    }, function (reject) {
+        return null;
+    });
 }
 
 function device(name, lang) {
     console.log("not yet implemented");
     device = name;
     if (lang != undefined) {
-      language = lang;
+        language = lang;
     }
     return this;
 };
 
-function ip(ip, lang) {
-  cachedIpOrHost = ip;
-  if (lang != undefined) {
-    language = lang;
-  }
-  return this;
+function getInstanceByIp(ip, lang) {
+    cachedIpOrHost = ip;
+    if (lang != undefined) {
+        language = lang;
+    }
+    return this;
+}
+
+function getInstance(lang) {
+    if (lang != undefined) {
+        language = lang;
+    }
+    return this;
 }
 
 /**
@@ -111,26 +115,29 @@ function ip(ip, lang) {
  * @param {} message
  * @param {*} callback
  */
-function notify(message) {
-  var hostOrIp;
-  return getDeviceAddress()
-  .then(function (deviceAddress) {
-    hostOrIp = deviceAddress
-		return getSpeechUrl(message, hostOrIp);
-  }).then(function (url) {
-    logDebug("got google TTS url: " + url);
-    return playUrlOnGoogleHome(hostOrIp, url);
-  }).catch(function (err) {
-    console.error(err.stack);
-  });
+function notify(message, language) {
+    var hostOrIp;
+
+    var lang = language != undefined ? language : lang;
+
+    return getDeviceAddress()
+        .then(function (deviceAddress) {
+            hostOrIp = deviceAddress
+            return getSpeechUrl(message, lang);
+        }).then(function (url) {
+            logDebug("got google TTS url: " + url);
+            return playUrlOnGoogleHome(hostOrIp, url);
+        }).catch(function (err) {
+            console.error(err.stack);
+        });
 };
 
-function getSpeechUrl(text, host, callback) {
-  var googletts = require('google-tts-api');
-  var googlettsaccent = language;
-  logDebug("google TTS text = " + text + " language=" + language);
+function getSpeechUrl(text, lang, callback) {
+    var googletts = require('google-tts-api');
+    var googlettsaccent = lang;
+    logDebug("google TTS text = " + text + " language=" + lang);
 
-  return googletts(text, language, 1, 1000, googlettsaccent)
+    return googletts(text, lang, 1, 1000)
 };
 
 /**
@@ -138,10 +145,10 @@ function getSpeechUrl(text, host, callback) {
  * @param {} mp3_url
  */
 function play(mp3_url) {
-  return getDeviceAddress()
-  .then(function (hostOrIp) {
-    return playUrlOnGoogleHome(hostOrIp, url);
-	})
+    return getDeviceAddress()
+        .then(function (hostOrIp) {
+            return playUrlOnGoogleHome(hostOrIp, url);
+        })
 };
 
 /**
@@ -150,58 +157,59 @@ function play(mp3_url) {
  * @param {*} url
  */
 function playUrlOnGoogleHome(host, url) {
-	return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
 
-    var chromecast = new Client();  // chromecast client
-    chromecast.on('error', function(err) {
-      console.log('Error: %s', err.message);
-      chromecast.close();
-      reject("Error: " + err.message);
-    });
-
-    chromecast.connect(host, function() {
-      chromecast.launch(DefaultMediaReceiver, function(err, player) {
-
-
-        var media = {
-          contentId: url,
-          contentType: 'audio/mp3',
-          streamType: 'LIVE' // BUFFERED or LIVE
-        };
-
-        // playing status watcher
-        var playing_flag = false;
-        player.on('status', function(status) {
-
-          if (async) return;
-
-          logDebug(status.playerState);
-          if (!playing_flag && status.playerState == "PLAYING") {
-            logDebug("Started playing");
-            playing_flag = true;
-          } else if (playing_flag && status.playerState == "IDLE") {
-            // IDLE -> PLAYING -> IDLE (playing ended)
-            logDebug("End playing");
-            resolve("playing end.");
+        var chromecast = new Client();  // chromecast client
+        chromecast.on('error', function (err) {
+            console.log('Error: %s', err.message);
             chromecast.close();
-          }
+            reject("Error: " + err.message);
         });
 
-        player.load(media, { autoplay: true }, function(err, status) {
-          if (async) {
-            // when async playing, we dont need status watching.
-            chromecast.close();
-            resolve("device notified async.");
-          }
-        });
-      });
-    });
+        chromecast.connect(host, function () {
+            chromecast.launch(DefaultMediaReceiver, function (err, player) {
 
-  }); // promise
+
+                var media = {
+                    contentId: url,
+                    contentType: 'audio/mp3',
+                    streamType: 'LIVE' // BUFFERED or LIVE
+                };
+
+                // playing status watcher
+                var playing_flag = false;
+                player.on('status', function (status) {
+
+                    if (async) return;
+
+                    logDebug(status.playerState);
+                    if (!playing_flag && status.playerState == "PLAYING") {
+                        logDebug("Started playing");
+                        playing_flag = true;
+                    } else if (playing_flag && status.playerState == "IDLE") {
+                        // IDLE -> PLAYING -> IDLE (playing ended)
+                        logDebug("End playing");
+                        resolve("playing end.");
+                        chromecast.close();
+                    }
+                });
+
+                player.load(media, { autoplay: true }, function (err, status) {
+                    if (async) {
+                        // when async playing, we dont need status watching.
+                        chromecast.close();
+                        resolve("device notified async.");
+                    }
+                });
+            });
+        });
+
+    }); // promise
 };
 
 // EXPORT
-exports.ip = ip;
+exports.getInstanceByIp = getInstanceByIp;
+exports.getInstance = getInstance;
 exports.device = device;
 exports.lang = language;
 exports.notify = notify;
