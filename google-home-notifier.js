@@ -20,7 +20,7 @@ var cachedIpOrHost;
  */
 function logDebug(msg) {
     if (DEBUG_LOG) {
-        console.log(msg);
+        console.log("[DEBUG] " + msg);
     }
 }
 
@@ -46,7 +46,7 @@ function getMDNSResponse(resolve, reject) {
                     logDebug(found.data.port)
                     logDebug("****************************************");
 
-                    resolve(found);
+                    // resolve(found);
                 }
             });
 
@@ -169,7 +169,6 @@ function playUrlOnGoogleHome(host, url) {
         chromecast.connect(host, function () {
             chromecast.launch(DefaultMediaReceiver, function (err, player) {
 
-
                 var media = {
                     contentId: url,
                     contentType: 'audio/mp3',
@@ -182,14 +181,14 @@ function playUrlOnGoogleHome(host, url) {
 
                     if (async) return;
 
-                    logDebug(status.playerState);
+                    logDebug(host + " "  + status.playerState);
                     if (!playing_flag && status.playerState == "PLAYING") {
-                        logDebug("Started playing");
+                        logDebug(host + " Started playing");
                         playing_flag = true;
                     } else if (playing_flag && status.playerState == "IDLE") {
                         // IDLE -> PLAYING -> IDLE (playing ended)
-                        logDebug("End playing");
-                        resolve("playing end.");
+                        logDebug(host + " End playing");
+                        resolve(host + "playing end.");
                         chromecast.close();
                     }
                 });
@@ -216,3 +215,4 @@ exports.notify = notify;
 exports.play = play;
 exports.debugLog = DEBUG_LOG;
 exports.async = async;
+exports.playUrlOnGoogleHome = playUrlOnGoogleHome;
