@@ -18,7 +18,7 @@ function getSpeechUrl(text, lang, callback) {
     var googlettsaccent = lang;
     logDebug("google TTS text = " + text + " language=" + lang);
 
-    return googletts(text, lang, 1, 1000)
+    return googletts.getAudioUrl(text, {lang: lang, slow: false});
 };
 
 

@@ -7,7 +7,7 @@ var gh = googlehome.ip("10.1.0.132", "ja");
 gh.lang = "ja";
 gh.debugLog = true;
 
-gh.notify("本日は晴天なり")
+gh.notify("くすりのんだ？")
 .then(function() {
   console.log("done");
 }).then(function() {
