@@ -1,5 +1,9 @@
 var DEBUG_LOG = true;
 
+const TYPE_CHROMECAST = "Chromecast";
+const TYPE_GOOGLEHOME = "GoogleHome";
+const TYPE_NONE = "NONE";
+
 function logDebug(msg) {
     if (DEBUG_LOG) {
         console.log("[DEBUG] " + msg);
@@ -17,6 +21,22 @@ const DEFAULT_OPTIONS = {
     "dnsSuffix": "_googlecast._tcp.local",
     "debugLog": false
 };
+
+/**
+ * mdns responseから、それがChromecastか、GoogleHomeか、無関係かを返す
+ * @param {*} response.additionals
+ */
+function getDeviceType(found) {
+    // check found for what we found
+    const name = found.name.toUpperCase();
+    if (name.startsWith("CHROMECAST")) {
+        return TYPE_CHROMECAST;
+    } else if (name.startsWith("GOOGLE-HOME")) {
+        return TYPE_GOOGLEHOME;
+    } else {
+        return TYPE_NONE;
+    }
+}
 
 /**
  * mDNSでデバイスを探索する。
@@ -39,34 +59,25 @@ function getMDNSResponse(mdnsOptions) {
         mdns.on('response', function (response) {
             response.additionals.forEach(function (found) {
 
-                // check found for what we found
                 if (!found.name.endsWith(options.dnsSuffix) || found.type !== 'SRV') {
-                    // discard these:
-                    // TXT record
-                    // _googlerpc._tcp.local
-                    // logDebug("Unknown record returned:" + found.type + " " + found.name);
-                } else {
-                    const name = found.name.toUpperCase();
-                    if (name.startsWith("CHROMECAST")) {
-                        logDebug("Found chromecast **********************************");
-                        if (options.chromecast) {
-                            google_homes.push(found.data.target);
-                        }
-                    } else if (name.startsWith("GOOGLE-HOME")) {
-                        logDebug("Found Google home *********************************");
-                        if (options.googleHome) {
-                            google_homes.push(found.data.target);
-                        }
-                    } else {
-                        logDebug("Found unknown device ******************************");
+                    return;
+                }
+            
+                const type = getDeviceType(found);
+                if (type === TYPE_CHROMECAST) {
+                    logDebug("Found chromecast: " + found.data.target);
+                    if (options.chromecast) {
+                        google_homes.push(found.data.target);
                     }
-                    logDebug(found.name)
-                    logDebug(found.data.target + " port " + found.data.port);
-                    logDebug("***************************************************");
-
+                } else if (type === TYPE_GOOGLEHOME) {
+                    logDebug("Found Google Home: " + found.data.target);
+                    if (options.googleHome) {
+                        google_homes.push(found.data.target);
+                    }
+                } else {
+                    logDebug("Found unknown device" + found.data.target);
                 }
             });
-
         });
 
         mdns.query({
@@ -77,8 +88,6 @@ function getMDNSResponse(mdnsOptions) {
         });
 
         setTimeout( function() {
-            // reject();
-            logDebug("mDNS destroy");
             mdns.destroy();
 
             if (google_homes.length > 0) {
@@ -90,7 +99,6 @@ function getMDNSResponse(mdnsOptions) {
 
     });
 }
-
 
 // EXPORT
 exports.getMDNSResponse = getMDNSResponse;
