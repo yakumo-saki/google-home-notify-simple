@@ -94,25 +94,3 @@ function getMDNSResponse(mdnsOptions) {
 
 // EXPORT
 exports.getMDNSResponse = getMDNSResponse;
-
-if (require.main === module) {
-    (async() => {
-        try {
-            logInfo("scanning Google Home");
-            const opt = {"chromecast": false, "googleHome": true, logDebug: false};
-            var googleHomes = await getMDNSResponse(opt);
-            logInfo(JSON.stringify(googleHomes));
-        } catch (error) {
-            logInfo("Google Home not found :" + error);
-        }
-
-        try {
-            logInfo("scanning Chromecast");
-            const opt = {"chromecast": true, "googleHome": false, logDebug: false};
-            var chromecasts = await getMDNSResponse(opt)
-            logInfo(JSON.stringify(chromecasts));
-        } catch (error) {
-            logInfo("Google Home not found :" + error);        
-        }
-    })();
-}
