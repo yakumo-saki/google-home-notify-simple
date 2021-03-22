@@ -1,6 +1,5 @@
 "use strict";
 
-const MDNS_SUFFIX = "_googlecast._tcp.local";
 const DEBUG_LOG = true;
 
 var Client = require('castv2-client').Client;
@@ -11,9 +10,6 @@ var language = "en";
 // wait until talk or playing is end.
 var async = false;
 
-// cache google home endpoint
-var cachedIpOrHost;
-
 /**
  * log output , but only DEBUG_LOG is enabled
  * @param {*} msg
@@ -23,133 +19,6 @@ function logDebug(msg) {
         console.log("[DEBUG] " + msg);
     }
 }
-
-/**
- * find google home. do not use directly.
- * use getDeviceAddress()
- * @param {*} msg
- */
-function getMDNSResponse(resolve, reject) {
-    console.log("get mDNS response")
-    return new Promise(function (resolve, reject) {
-        var mdns = require('multicast-dns')();
-
-        mdns.on('response', function (response) {
-            // console.log('got a response packet:', response);
-
-            response.additionals.forEach(function (found) {
-
-                // check found for what we found
-                if (found.name.endsWith(MDNS_SUFFIX) && found.type === 'SRV') {
-                    logDebug("Found google home **********************");
-                    logDebug(found.data.target)
-                    logDebug(found.data.port)
-                    logDebug("****************************************");
-
-                    // resolve(found);
-                }
-            });
-
-            logDebug("mDNS destroy");
-
-            reject();
-            mdns.destroy();
-        });
-
-        mdns.query({
-            questions: [{
-                name: MDNS_SUFFIX,
-                type: 'PTR'
-            }]
-        });
-
-    });
-}
-
-/**
- * get google home ip or hostname.
- * @param {*} msg
- * @returns promise
- */
-function getDeviceAddress() {
-    if (cachedIpOrHost != null) {
-        logDebug("Discover google home by cache = " + cachedIpOrHost);
-        return Promise.resolve(cachedIpOrHost);
-    }
-
-    return getMDNSResponse().then(function (resolve) {
-        logDebug("Discover google home by mDNS = " + resolve.data.target)
-        cachedIpOrHost = resolve.data.target;
-        return resolve.data.target;
-    }, function (reject) {
-        return null;
-    });
-}
-
-function device(name, lang) {
-    console.log("not yet implemented");
-    device = name;
-    if (lang != undefined) {
-        language = lang;
-    }
-    return this;
-};
-
-function getInstanceByIp(ip, lang) {
-    cachedIpOrHost = ip;
-    if (lang != undefined) {
-        language = lang;
-    }
-    return this;
-}
-
-function getInstance(lang) {
-    if (lang != undefined) {
-        language = lang;
-    }
-    return this;
-}
-
-/**
- * Talk text by TTS
- * @param {} message
- * @param {*} callback
- */
-function notify(message, language) {
-    var hostOrIp;
-
-    var lang = language != undefined ? language : lang;
-
-    return getDeviceAddress()
-        .then(function (deviceAddress) {
-            hostOrIp = deviceAddress
-            return getSpeechUrl(message, lang);
-        }).then(function (url) {
-            logDebug("got google TTS url: " + url);
-            return playUrlOnGoogleHome(hostOrIp, url);
-        }).catch(function (err) {
-            console.error(err.stack);
-        });
-};
-
-function getSpeechUrl(text, lang, callback) {
-    var googletts = require('google-tts-api');
-    var googlettsaccent = lang;
-    logDebug("google TTS text = " + text + " language=" + lang);
-
-    return googletts.getAudioUrl(text, {lang: lang, slow: false});
-};
-
-/**
- * play mp3 url.
- * @param {} mp3_url
- */
-function play(mp3_url) {
-    return getDeviceAddress()
-        .then(function (hostOrIp) {
-            return playUrlOnGoogleHome(hostOrIp, url);
-        })
-};
 
 /**
  * Play MP3 url on specified Google Home
@@ -207,12 +76,7 @@ function playUrlOnGoogleHome(host, url) {
 };
 
 // EXPORT
-exports.getInstanceByIp = getInstanceByIp;
-exports.getInstance = getInstance;
-exports.device = device;
 exports.lang = language;
-exports.notify = notify;
-exports.play = play;
 exports.debugLog = DEBUG_LOG;
 exports.async = async;
 exports.playUrlOnGoogleHome = playUrlOnGoogleHome;

@@ -1,7 +1,4 @@
-const MDNS_SUFFIX = "_googlecast._tcp.local";
-const DEBUG_LOG = true;
-
-const MDNS_WAIT_MS = 300;
+var DEBUG_LOG = true;
 
 function logDebug(msg) {
     if (DEBUG_LOG) {
@@ -9,28 +6,64 @@ function logDebug(msg) {
     }
 }
 
-function getMDNSResponse() {
+function logInfo(msg) {
+    console.log("[INFO ] " + msg);
+}
 
-    logDebug("get mDNS response")
+const DEFAULT_OPTIONS = {
+    "chromecast": false,
+    "googleHome": true,
+    "replyWaitMs": 3000,
+    "dnsSuffix": "_googlecast._tcp.local",
+    "debugLog": false
+};
+
+/**
+ * mDNSでデバイスを探索する。
+ * mDNSは要求をブロードキャストしてから各機器がそれぞれ応答してくるのである程度の
+ * 時間内に応答してきたものを返す。
+ * @returns 
+ */
+function getMDNSResponse(mdnsOptions) {
+
+    const options = Object.assign(DEFAULT_OPTIONS, mdnsOptions);
+    DEBUG_LOG = options.logDebug;
+
+    logDebug("mDNS Query " + options.dnsSuffix + " (" + options.replyWaitMs + "ms).");
 
     return new Promise(function (resolve, reject) {
         var mdns = require('multicast-dns')();
 
         var google_homes = new Array();
 
-        logDebug("Wait for mDNS response (" + MDNS_WAIT_MS + "ms).");
-
         mdns.on('response', function (response) {
             response.additionals.forEach(function (found) {
 
                 // check found for what we found
-                if (found.name.endsWith(MDNS_SUFFIX) && found.type === 'SRV') {
-                    logDebug("Found google home **********************");
-                    logDebug(found.data.target)
-                    logDebug(found.data.port)
-                    logDebug("****************************************");
+                if (!found.name.endsWith(options.dnsSuffix) || found.type !== 'SRV') {
+                    // discard these:
+                    // TXT record
+                    // _googlerpc._tcp.local
+                    // logDebug("Unknown record returned:" + found.type + " " + found.name);
+                } else {
+                    const name = found.name.toUpperCase();
+                    if (name.startsWith("CHROMECAST")) {
+                        logDebug("Found chromecast **********************************");
+                        if (options.chromecast) {
+                            google_homes.push(found.data.target);
+                        }
+                    } else if (name.startsWith("GOOGLE-HOME")) {
+                        logDebug("Found Google home *********************************");
+                        if (options.googleHome) {
+                            google_homes.push(found.data.target);
+                        }
+                    } else {
+                        logDebug("Found unknown device ******************************");
+                    }
+                    logDebug(found.name)
+                    logDebug(found.data.target + " port " + found.data.port);
+                    logDebug("***************************************************");
 
-                    google_homes.push(found.data.target);
                 }
             });
 
@@ -38,7 +71,7 @@ function getMDNSResponse() {
 
         mdns.query({
             questions: [{
-                name: MDNS_SUFFIX,
+                name: options.dnsSuffix,
                 type: 'PTR'
             }]
         });
@@ -51,9 +84,9 @@ function getMDNSResponse() {
             if (google_homes.length > 0) {
                 resolve(google_homes);
             } else {
-                reject();
+                reject("No response. maybe no google devices in network.");
             }
-        }, 3000);
+        }, options.replyWaitMs);
 
     });
 }
@@ -62,4 +95,24 @@ function getMDNSResponse() {
 // EXPORT
 exports.getMDNSResponse = getMDNSResponse;
 
-// getMDNSResponse();
+if (module.parent == null) {
+    (async() => {
+        try {
+            logInfo("scanning Google Home");
+            const opt = {"chromecast": false, "googleHome": true, logDebug: false};
+            var googleHomes = await getMDNSResponse(opt);
+            logInfo(JSON.stringify(googleHomes));
+        } catch (error) {
+            logInfo("Google Home not found :" + error);
+        }
+
+        try {
+            logInfo("scanning Chromecast");
+            const opt = {"chromecast": true, "googleHome": false, logDebug: false};
+            var chromecasts = await getMDNSResponse(opt)
+            logInfo(JSON.stringify(chromecasts));
+        } catch (error) {
+            logInfo("Google Home not found :" + error);        
+        }
+    })();
+}

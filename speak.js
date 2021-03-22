@@ -1,5 +1,5 @@
-var googlehome = require('./google-home-notifier');
-var mdns_scan = require('./mdns-scan');
+var googlehomeNotifier = require('./google-home-notifier');
+var mdnsScanner = require('./mdns-scan');
 
 const DEBUG_LOG = true;
 
@@ -21,26 +21,9 @@ function getSpeechUrl(text, lang, callback) {
     return googletts.getAudioUrl(text, {lang: lang, slow: false});
 };
 
+async function speakOnGoogleDevice() {
 
-async function doit() {
-
-    var gh = googlehome.getInstance();
-    gh.language = "ja";
-    gh.debugLog = true;
-    gh.async = false;
-
-    var speaks = [];
-    for (var i = 2; i < process.argv.length; i++) {
-        logDebug("doit param = " + process.argv[i]);
-        var url = await getSpeechUrl(process.argv[i], "ja");
-        logDebug(process.argv[i] + " => " + url );
-        await gh.notify(process.argv[i], "ja");
-    }
-}
-
-async function doit2() {
-
-    var google_homes;
+    var googleHomes;
     var url;
     await Promise.all([
         new Promise(async function(resolve) {
@@ -48,24 +31,23 @@ async function doit2() {
             resolve();
         }),
         new Promise(async function(resolve) {
-            google_homes = await mdns_scan.getMDNSResponse();
-            logDebug(google_homes);
+            googleHomes = await mdnsScanner.getMDNSResponse();
+            logDebug(googleHomes);
             resolve();
         })
     ]).then(function() {
         // logDebug(google_homes);
-        google_homes.forEach(function (host) {
-            googlehome.playUrlOnGoogleHome(host, url);
+        googleHomes.forEach(function (host) {
+            googlehomeNotifier.playUrlOnGoogleHome(host, url);
         });
     });
 }
 
 (async () => {
     try {
-        doit2();
+        speakOnGoogleDevice();
     } catch (e) {
         // Deal with the fact the chain failed
         console.error("error " + e);
     }
 })();
-

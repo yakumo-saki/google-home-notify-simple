@@ -9,7 +9,23 @@ google-home-notifier.js
 based on https://github.com/noelportugal/google-home-notifier
 
 ## How to use
+
+### for users
+
+`node speak.js "こんにちわ"`
+`node speak.js "Hello world"`
+
+### for developers
+
 see test.js
 
 ## NOTE
-this program is under deverlopment. but works.
+
+this program is under deverlopment. but maybe works.
+
+## VERSIONS
+
+### 2021/03/22
+
+* CHANGE: Code cleanup
+* CHANGE: Notify only on GoogleHome or Chromecast
