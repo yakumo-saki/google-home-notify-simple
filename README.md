@@ -5,6 +5,7 @@ A nodejs google home notifier.
 Can talk text (by Google TTS) or Play MP3 on google home.
 
 ## Acknowledgments
+
 google-home-notifier.js
 based on https://github.com/noelportugal/google-home-notifier
 
@@ -17,7 +18,8 @@ based on https://github.com/noelportugal/google-home-notifier
 
 ### for developers
 
-see test.js
+Google home notifier simple usage: 01_basic.js
+mDNS Scanner simple usage: 02_mdns.js
 
 ## NOTE
 
