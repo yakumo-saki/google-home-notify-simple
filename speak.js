@@ -1,3 +1,8 @@
+// ====================================================================
+// Speak on Google Home or chromecast
+// ====================================================================
+
+
 var googlehomeNotifier = require('./google-home-notifier');
 var mdnsScanner = require('./mdns-scan');
 
@@ -31,7 +36,8 @@ async function speakOnGoogleDevice() {
             resolve();
         }),
         new Promise(async function(resolve) {
-            googleHomes = await mdnsScanner.getMDNSResponse();
+            const opt = {"chromecast": false, "googleHome": true};
+            googleHomes = await mdnsScanner.getMDNSResponse(opt);
             logDebug(googleHomes);
             resolve();
         })
