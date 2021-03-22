@@ -95,7 +95,7 @@ function getMDNSResponse(mdnsOptions) {
 // EXPORT
 exports.getMDNSResponse = getMDNSResponse;
 
-if (module.parent == null) {
+if (require.main === module) {
     (async() => {
         try {
             logInfo("scanning Google Home");
